@@ -47,3 +47,45 @@ def cosine_similarity():
 
     return jsonify({'most_similar_text': texts[most_similar_index]})
 
+
+import os
+import qrcode
+import uuid
+from flask import Flask, request, jsonify, url_for
+
+app = Flask(__name__, static_folder='qrcodes')
+
+@app.route('/generate_qrcode', methods=['POST'])
+def generate_qrcode():
+    try:
+        data = request.json
+        web_url = data['url']
+
+        # Generate QR code
+        qr = qrcode.QRCode(
+            version=1,
+            error_correction=qrcode.constants.ERROR_CORRECT_L,
+            box_size=10,
+            border=4,
+        )
+        qr.add_data(web_url)
+        qr.make(fit=True)
+        img = qr.make_image(fill_color="black", back_color="white")
+
+        # Ensure the directory exists
+        qr_code_dir = 'qrcodes'
+        os.makedirs(qr_code_dir, exist_ok=True)
+
+        # Save the QR code
+        unique_filename = f"{str(uuid.uuid4())}.png"
+        file_path = os.path.join(qr_code_dir, unique_filename)
+        img.save(file_path)
+
+        # Build URL for QR code image and return it
+        qr_code_url = request.url_root.rstrip('/') + url_for('static', filename=unique_filename)
+        return jsonify({'qr_code_url': qr_code_url})
+    
+    except Exception as e:
+        app.logger.error(f"Error generating QR code: {str(e)}", exc_info=True)
+        return jsonify({'error': 'Error generating QR code'}), 500
+
