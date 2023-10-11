@@ -53,7 +53,6 @@ import qrcode
 import uuid
 from flask import Flask, request, jsonify, url_for
 
-app = Flask(__name__, static_folder='qrcodes')
 
 @app.route('/generate_qrcode', methods=['POST'])
 def generate_qrcode():
