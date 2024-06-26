@@ -1,5 +1,5 @@
 # Use an official Python runtime as a parent image
-FROM python:3.8-slim-buster
+FROM python:3.9-slim-buster
 
 # FFmpeg installation
 RUN apt-get update && \
@@ -13,8 +13,7 @@ WORKDIR /app
 ADD . /app
 
 # Install necessary packages, Flask and ffmpeg-python
-RUN pip install --no-cache-dir flask werkzeug ffmpeg-python requests gunicorn scipy python-pptx PyPDF2 cloudconvert python-docx firebase-admin openai google-cloud-secret-manager google-cloud-firestore qrcode[pil]
-
+RUN pip install --no-cache-dir flask werkzeug ffmpeg-python requests gunicorn scipy python-pptx PyPDF2 PyMuPDF
 # Make port 5000 available to the world outside this container
 # EXPOSE 5000
 
