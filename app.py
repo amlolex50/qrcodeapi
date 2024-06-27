@@ -51,12 +51,18 @@ def cosine_similarity():
 from flask import Flask, request, send_file, jsonify
 import fitz  # PyMuPDF
 import io
-import os
+import requests
 from docx import Document
-from docx.shared import RGBColor
 
+
+def download_file(url):
+    """Download the file from the provided URL and return it as a BytesIO object."""
+    response = requests.get(url)
+    response.raise_for_status()
+    return io.BytesIO(response.content)
 
 def redact_pdf(file, keywords):
+    """Redact specified keywords in a PDF file."""
     document = fitz.open(stream=file.read(), filetype="pdf")
     for page_num in range(len(document)):
         page = document.load_page(page_num)
@@ -71,6 +77,7 @@ def redact_pdf(file, keywords):
     return redacted_pdf
 
 def redact_docx(file, keywords):
+    """Redact specified keywords in a DOCX file."""
     document = Document(file)
     for paragraph in document.paragraphs:
         for keyword in keywords:
@@ -88,19 +95,25 @@ def redact_docx(file, keywords):
 @app.route('/redact', methods=['POST'])
 def redact():
     try:
-        keywords = request.form.getlist('keywords')
+        # Extract keywords from the request JSON and split them into a list
+        keywords = request.json.get('keywords')
         if not keywords:
             return jsonify({'error': 'No keywords provided'}), 400
+        keywords = [k.strip() for k in keywords.split(',')]
 
-        file = request.files.get('file')
-        if file is None:
-            return jsonify({'error': 'No file provided'}), 400
+        # Extract file URL from the request JSON
+        file_url = request.json.get('file')
+        if not file_url:
+            return jsonify({'error': 'No file URL provided'}), 400
 
-        filename = file.filename
-        if filename.endswith('.pdf'):
+        # Download the file from the URL
+        file = download_file(file_url)
+
+        # Check the file type and process accordingly
+        if file_url.endswith('.pdf'):
             redacted_file = redact_pdf(file, keywords)
             return send_file(redacted_file, attachment_filename='redacted.pdf', as_attachment=True)
-        elif filename.endswith('.docx'):
+        elif file_url.endswith('.docx'):
             redacted_file = redact_docx(file, keywords)
             return send_file(redacted_file, attachment_filename='redacted.docx', as_attachment=True)
         else:
@@ -120,9 +133,6 @@ def method_not_allowed(e):
 @app.errorhandler(500)
 def internal_server_error(e):
     return jsonify({'error': 'Internal server error'}), 500
-
-
-
 
 
 
