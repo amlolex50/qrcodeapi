@@ -51,15 +51,8 @@ def cosine_similarity():
 from flask import Flask, request, send_file, jsonify
 import fitz  # PyMuPDF
 import io
-import requests
 from docx import Document
 
-
-def download_file(url):
-    """Download the file from the provided URL and return it as a BytesIO object."""
-    response = requests.get(url)
-    response.raise_for_status()
-    return io.BytesIO(response.content)
 
 def redact_pdf(file, keywords):
     """Redact specified keywords in a PDF file."""
@@ -95,31 +88,25 @@ def redact_docx(file, keywords):
 @app.route('/redact', methods=['POST'])
 def redact():
     try:
-        # Extract keywords from the request JSON and split them into a list
-        keywords = request.json.get('keywords')
+        keywords = request.form.getlist('keywords')
         if not keywords:
             return jsonify({'error': 'No keywords provided'}), 400
-        keywords = [k.strip() for k in keywords.split(',')]
 
-        # Extract file URL from the request JSON
-        file_url = request.json.get('file')
-        if not file_url:
-            return jsonify({'error': 'No file URL provided'}), 400
+        file = request.files.get('file')
+        if file is None:
+            return jsonify({'error': 'No file provided'}), 400
 
-        # Download the file from the URL
-        file = download_file(file_url)
-
-        # Check the file type and process accordingly
-        if file_url.endswith('.pdf'):
+        filename = file.filename
+        if filename.endswith('.pdf'):
             redacted_file = redact_pdf(file, keywords)
-            filename = 'redacted.pdf'
-        elif file_url.endswith('.docx'):
+            output_filename = 'redacted.pdf'
+        elif filename.endswith('.docx'):
             redacted_file = redact_docx(file, keywords)
-            filename = 'redacted.docx'
+            output_filename = 'redacted.docx'
         else:
             return jsonify({'error': 'Unsupported file type. Only PDF and DOCX are supported.'}), 400
 
-        return send_file(redacted_file, as_attachment=True, download_name=filename)
+        return send_file(redacted_file, as_attachment=True, download_name=output_filename)
 
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -135,6 +122,9 @@ def method_not_allowed(e):
 @app.errorhandler(500)
 def internal_server_error(e):
     return jsonify({'error': 'Internal server error'}), 500
+
+
+
 
 
 
