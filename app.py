@@ -112,12 +112,14 @@ def redact():
         # Check the file type and process accordingly
         if file_url.endswith('.pdf'):
             redacted_file = redact_pdf(file, keywords)
-            return send_file(redacted_file, attachment_filename='redacted.pdf', as_attachment=True)
+            filename = 'redacted.pdf'
         elif file_url.endswith('.docx'):
             redacted_file = redact_docx(file, keywords)
-            return send_file(redacted_file, attachment_filename='redacted.docx', as_attachment=True)
+            filename = 'redacted.docx'
         else:
             return jsonify({'error': 'Unsupported file type. Only PDF and DOCX are supported.'}), 400
+
+        return send_file(redacted_file, as_attachment=True, download_name=filename)
 
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -133,6 +135,9 @@ def method_not_allowed(e):
 @app.errorhandler(500)
 def internal_server_error(e):
     return jsonify({'error': 'Internal server error'}), 500
+
+
+
 
 
 
